@@ -17,8 +17,9 @@ data Expr c a where
     Lit :: Int -> Expr () Int
     Lam :: Expr (c, a) b -> Expr c (a -> b)
     App :: Expr c (a -> b) -> Expr c a -> Expr c b
+    Let :: Expr c a -> Expr (c, a) b -> Expr c b
 
--- | Index of a variable of type @a@ in the context @c@. The zero index 'Z'
+-- | Index of a variable of type @a@ in a context @c@. The zero index 'Z'
 -- corresponds to the variable occuring as the last element of the context.
 -- Otherwise, we skip ('S') the last element and index into the rest of the
 -- context.
@@ -109,3 +110,4 @@ compile e = case e of
     Lit i     -> Const i
     Lam e     -> Curry (compile e)
     App e1 e2 -> Apply :.: (compile e1 :*: compile e2)
+    Let e1 e2 -> compile e2 :.: (Id :*: compile e1)
