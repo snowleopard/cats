@@ -2,7 +2,7 @@
 module CCC where
 
 -- Experimenting with compiling STLC to Closed Cartesian Categories.
--- See Conal Elliot's ICFP'17 paper "Compiling to Categories":
+-- See Conal Elliott's ICFP'17 paper "Compiling to Categories":
 -- http://conal.net/papers/compiling-to-categories/compiling-to-categories.pdf
 
 ------------------------- Simply typed lambda-calculus -------------------------

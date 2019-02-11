@@ -6,7 +6,7 @@ Category Theory.
 ## Compiling to Categories
 
 Experimenting with compiling STLC to Closed Cartesian Categories.
-See Conal Elliot's ICFP'17 paper
+See Conal Elliott's ICFP'17 paper
 [Compiling to Categories](http://conal.net/papers/compiling-to-categories/compiling-to-categories.pdf).
 
 Source: https://github.com/snowleopard/cats/blob/master/src/CCC.hs.
