@@ -2,7 +2,7 @@
 module CCC where
 
 -- Experimenting with compiling STLC to Closed Cartesian Categories.
--- See Conal's ICFP'17 paper "Compiling to Categories":
+-- See Conal Elliot's ICFP'17 paper "Compiling to Categories":
 -- http://conal.net/papers/compiling-to-categories/compiling-to-categories.pdf
 
 ------------------------- Simply typed lambda-calculus -------------------------
@@ -20,7 +20,7 @@ data Expr c a where
 
 -- | Index of a variable of type @a@ in the context @c@. The zero index 'Z'
 -- corresponds to the variable occuring as the last element of the context.
--- Otherwise, we skip ('S') the first element and index into the rest of the
+-- Otherwise, we skip ('S') the last element and index into the rest of the
 -- context.
 data Index c a where
     Z ::              Index (c, a) a
@@ -47,12 +47,12 @@ exConst = Lam $ Lam $ Var (S Z)
 
 -- | An open expression with functions @f :: b -> c@ and @g :: a -> b@ in the
 -- context that computes their composition @f . g :: a -> c@.
-exCompose :: Expr (((), b -> c), a -> b) (a -> c)
+exCompose :: Expr (((), a -> b), b -> c) (a -> c)
 exCompose = Lam (App f (App g x))
   where
     x = Var Z
-    f = Var (S (S Z))
-    g = Var (S Z)
+    f = Var (S Z)
+    g = Var (S (S Z))
 
 -------------------------- Closed Cartesian Categories -------------------------
 
@@ -90,10 +90,10 @@ instance Show UntypedCCC where
         Unit      -> showString "()"
         Const i   -> shows i
         Apply     -> showString "apply"
-        Curry f   -> showParen (p > 11) $ showString "curry "
-                                      . showsPrec 11 (U f)
-        Uncurry f -> showParen (p > 11) $ showString "uncurry "
-                                        . showsPrec 11 (U f)
+        Curry f   -> showParen (p >= 11) $ showString "curry "
+                                         . showsPrec 11 (U f)
+        Uncurry f -> showParen (p >= 11) $ showString "uncurry "
+                                         . showsPrec 11 (U f)
 
 -- | Pretty-print a 'CCC' expression.
 pretty :: CCC a b -> String
