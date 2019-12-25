@@ -4,6 +4,9 @@ module CCC where
 -- Experimenting with compiling STLC to Closed Cartesian Categories.
 -- See Conal Elliott's ICFP'17 paper "Compiling to Categories":
 -- http://conal.net/papers/compiling-to-categories/compiling-to-categories.pdf
+--
+-- See also: "The categorical abstract machine" by Cousineau et al. (1987):
+-- https://core.ac.uk/download/pdf/82453178.pdf
 
 ------------------------- Simply typed lambda-calculus -------------------------
 
