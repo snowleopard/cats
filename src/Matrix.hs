@@ -1,6 +1,5 @@
-{-# LANGUAGE DataKinds, DefaultSignatures, GADTs, LambdaCase, NoStarIsType #-}
-{-# LANGUAGE ScopedTypeVariables, RankNTypes, TypeApplications, TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE DefaultSignatures, GADTs, LambdaCase, ScopedTypeVariables #-}
+{-# LANGUAGE RankNTypes, TypeApplications, TypeFamilies, TypeOperators #-}
 module Matrix where
 
 -- Experimenting with an inductive matrix data type that forms a category.
