@@ -146,6 +146,31 @@ transpose m = case m of
 select :: Num e => Matrix e a (Either b c) -> Matrix e b c -> Matrix e a c
 select x y = Join y id . x
 
+class Construct a where
+    row :: Num e => Vector e a -> Matrix e a ()
+
+    linearMap :: (Construct b, Num e) => LinearMap e a b -> Matrix e a b
+
+instance Construct Void where
+    linearMap = const Zero
+    row = const Zero
+
+instance Construct () where
+    row v = one (at v ())
+
+    linearMap m = column (m 1)
+
+instance (Construct a, Construct b) => Construct (Either a b) where
+    row v = row (Left >$< v) ||| row (Right >$< v)
+
+    linearMap m = linearMap (m . padRight) ||| linearMap (m . padLeft)
+
+column :: (Construct a, Num e) => Vector e a -> Matrix e () a
+column = transpose . row
+
+function :: (Construct a, Construct b, Enumerable a, Num e) => (a -> b -> e) -> Matrix e a b
+function f = linearMap $ \v -> Vector $ \b -> dot v $ Vector $ \a -> f a b
+
 ----------------------------------- Semantics ----------------------------------
 newtype Vector e a = Vector { at :: a -> e }
 
@@ -179,7 +204,6 @@ semantics m = case m of
     Join x y   -> \v -> semantics x (Left >$< v) + semantics y (Right >$< v)
     Fork x y   -> \v -> Vector $ either (at (semantics x v)) (at (semantics y v))
 
--- These functions are unnecessary for now
 padLeft :: Num e => Vector e b -> Vector e (Either a b)
 padLeft v = Vector $ \case Left _  -> 0
                            Right b -> at v b
@@ -188,11 +212,8 @@ padRight :: Num e => Vector e a -> Vector e (Either a b)
 padRight v = Vector $ \case Left a  -> at v a
                             Right _ -> 0
 
-curryV :: Vector e (a, b) -> Vector (Vector e b) a
-curryV v = Vector $ \a -> Vector $ \b -> at v (a, b)
-
-uncurryV :: Vector (Vector e b) a -> Vector e (a, b)
-uncurryV v = Vector $ \(a, b) -> at (at v a) b
+dot :: (Num e, Enumerable a) => Vector e a -> Vector e a -> e
+dot x y = sum [ at x a * at y a | a <- enumerate ]
 
 -------------------------------- Deconstruction --------------------------------
 class Enumerable a where
