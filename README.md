@@ -21,3 +21,26 @@ compile k :: CCC c (a1 -> a2 -> a1)
 λ> pretty (compile k)
 "curry (curry (snd . fst))"
 ```
+
+## Matrix category
+
+Experimenting with an inductive matrix data type that forms a category.
+
+Source: https://github.com/snowleopard/cats/blob/master/src/Matrix.hs.
+
+An example `ghci` session:
+```haskell
+λ> m = (one 1 ||| one 2) &&& (one 3 ||| one 4)
+λ> dump m
+[1,2]
+[3,4]
+λ> dump (transpose m)
+[1,3]
+[2,4]
+λ> dump (m . transpose m)
+[5,11]
+[11,25]
+λ> dump ((m . transpose m) ||| id)
+[5,11,1,0]
+[11,25,0,1]
+```
