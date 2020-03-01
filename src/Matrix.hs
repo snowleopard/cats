@@ -1,5 +1,6 @@
 {-# LANGUAGE DefaultSignatures, GADTs, LambdaCase, ScopedTypeVariables #-}
 {-# LANGUAGE RankNTypes, TypeApplications, TypeFamilies, TypeOperators #-}
+{-# LANGUAGE FlexibleContexts #-}
 module Matrix where
 
 -- Experimenting with an inductive matrix data type that forms a category.
@@ -243,3 +244,45 @@ toLists m = List.transpose
 
 dump :: (Enumerable a, Enumerable b, Eq a, Num e, Show e) => Matrix e a b -> IO ()
 dump = mapM_ print . toLists
+
+------------------------------- Normalised types -------------------------------
+class Profunctor p where
+    dimap :: (a -> b) -> (c -> d) -> p b c -> p a d
+
+instance Profunctor (->) where
+    dimap f g h = g . h . f
+
+class Construct (Norm a) => ConstructNorm a where
+    type Norm a
+    toNorm :: a -> Norm a
+    fromNorm :: Norm a -> a
+
+instance ConstructNorm () where
+    type Norm () = ()
+    toNorm = Prelude.id
+    fromNorm = Prelude.id
+
+instance (ConstructNorm a, ConstructNorm b) => ConstructNorm (Either a b) where
+    type Norm (Either a b) = Either (Norm a) (Norm b)
+    toNorm = either (Left . toNorm) (Right . toNorm)
+    fromNorm = either (Left . fromNorm) (Right . fromNorm)
+
+-- Instance for other data types can be obtained mechanically using Generics
+instance ConstructNorm Bool where
+    type Norm Bool = Either () ()
+    toNorm = bool (Left ()) (Right ())
+    fromNorm = either (const False) (const True)
+
+rowN :: (ConstructNorm a, Num e) => Vector e a -> Matrix e (Norm a) ()
+rowN = row . contramap fromNorm
+
+linearMapN :: (ConstructNorm a, ConstructNorm b, Num e)
+           => LinearMap e a b -> Matrix e (Norm a) (Norm b)
+linearMapN = linearMap . dimap (contramap toNorm) (contramap fromNorm)
+
+columnN :: (ConstructNorm a, Num e) => Vector e a -> Matrix e () (Norm a)
+columnN = transpose . rowN
+
+functionN :: (ConstructNorm a, ConstructNorm b, Enumerable a, Num e)
+          => (a -> b -> e) -> Matrix e (Norm a) (Norm b)
+functionN f = linearMapN $ \v -> Vector $ \b -> dot v $ Vector $ \a -> f a b

@@ -43,4 +43,7 @@ An example `ghci` session:
 λ> dump ((m . transpose m) ||| id)
 [5,11,1,0]
 [11,25,0,1]
+λ> dump $ functionN (\x y -> bool 0 1 (x || y))
+[0,1]
+[1,1]
 ```
