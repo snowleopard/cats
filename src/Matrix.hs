@@ -27,6 +27,24 @@ import Prelude hiding (id, (.), fst, snd, curry, uncurry)
 import qualified Data.List as List
 import qualified Prelude
 
+class Semiring a where
+    zero  :: a
+    one   :: a
+    (|+|) :: a -> a -> a
+    (|*|) :: a -> a -> a
+
+instance Semiring Int where
+    zero  = 0
+    one   = 1
+    (|+|) = (+)
+    (|*|) = (*)
+
+instance Semiring Bool where
+    zero  = False
+    one   = True
+    (|+|) = (||)
+    (|*|) = (&&)
+
 --------------------------------- Construction ---------------------------------
 data Matrix e a b where
     Unit :: Matrix e a a
@@ -41,26 +59,22 @@ empty = Unit
 emap :: (e -> e) -> Matrix e a b -> Matrix e a b
 emap f = Lift (const f) Zero
 
-scale :: Num e => e -> Matrix e a b -> Matrix e a b
-scale e = emap (e*)
+scale :: Semiring e => e -> Matrix e a b -> Matrix e a b
+scale e = emap (e |*|)
 
-one :: Num e => e -> Matrix e () ()
-one e = scale e Unit
+singleton :: Semiring e => e -> Matrix e () ()
+singleton e = scale e Unit
 
 constant :: e -> Matrix e a b
 constant e = emap (const e) Zero
 
--- Better switch to using a custom type class Field without the signum nonsense
-instance Num e => Num (Matrix e a b) where
-    fromInteger = constant . fromInteger
-    (+)         = Lift (+)
-    (-)         = Lift (-)
-    (*)         = Lift (*)
-    abs         = emap abs
-    negate      = emap negate
-    signum      = error "No sensible definition"
+instance (Semiring e, a ~ b) => Semiring (Matrix e a b) where
+    zero  = Zero
+    one   = Unit
+    (|+|) = Lift (|+|)
+    (|*|) = (.)
 
-instance Num e => Category (Matrix e) where
+instance Semiring e => Category (Matrix e) where
     id = Unit
 
     Unit       . x          = x
@@ -69,7 +83,7 @@ instance Num e => Category (Matrix e) where
     _          . Zero       = Zero
     Lift f x y . z          = Lift f (x . z) (y . z)
     x          . Lift f y z = Lift f (x . y) (x . z)
-    Join w x   . Fork y z   = Lift (+) (w . y) (x . z)
+    Join w x   . Fork y z   = Lift (|+|) (w . y) (x . z)
     Fork x y   . z          = Fork (x . z) (y . z)
     x          . Join y z   = Join (x . y) (x . z)
 
@@ -86,7 +100,7 @@ instance Cartesian (->) where
     snd = Prelude.snd
     (f &&& g) a = (f a, g a)
 
-instance Num e => Cartesian (Matrix e) where
+instance Semiring e => Cartesian (Matrix e) where
     type Product (Matrix e) = Either
     fst   = Join Unit Zero
     snd   = Join Zero Unit
@@ -107,7 +121,7 @@ bimapSum :: CoCartesian k => k a c -> k b d -> Sum k a b `k` Sum k c d
 bimapSum f g = (inl . f) ||| (inr . g)
 
 -- For free!
-(-|-) :: Num e => Matrix e a b -> Matrix e c d -> Matrix e (Either a c) (Either b d)
+(-|-) :: Semiring e => Matrix e a b -> Matrix e c d -> Matrix e (Either a c) (Either b d)
 (-|-) = bimapSum
 
 infixl 5 -|-
@@ -119,7 +133,7 @@ instance CoCartesian (->) where
     (f ||| _) (Left  a) = f a
     (_ ||| g) (Right a) = g a
 
-instance Num e => CoCartesian (Matrix e) where
+instance Semiring e => CoCartesian (Matrix e) where
     type Sum (Matrix e) = Either
     inl = Fork Unit Zero
     inr = Fork Zero Unit
@@ -132,7 +146,7 @@ instance Distributive (->) where
     distribute (a, Left  b) = Left  (a, b)
     distribute (a, Right c) = Right (a, c)
 
-instance Num e => Distributive (Matrix e) where
+instance Semiring e => Distributive (Matrix e) where
     distribute = Fork (id -|- fst) (id -|- snd)
 
 transpose :: Matrix e a b -> Matrix e b a
@@ -143,32 +157,32 @@ transpose m = case m of
     Join x y   -> Fork (transpose x) (transpose y)
     Fork x y   -> Join (transpose x) (transpose y)
 
-select :: Num e => Matrix e a (Either b c) -> Matrix e b c -> Matrix e a c
+select :: Semiring e => Matrix e a (Either b c) -> Matrix e b c -> Matrix e a c
 select x y = Join y id . x
 
 class Construct a where
-    row :: Num e => Vector e a -> Matrix e a ()
+    row :: Semiring e => Vector e a -> Matrix e a ()
 
-    linearMap :: (Construct b, Num e) => LinearMap e a b -> Matrix e a b
+    linearMap :: (Construct b, Semiring e) => LinearMap e a b -> Matrix e a b
 
 instance Construct Void where
     linearMap = const Zero
     row = const Zero
 
 instance Construct () where
-    row v = one (at v ())
+    row v = singleton (at v ())
 
-    linearMap m = column (m 1)
+    linearMap m = column (m $ constV one)
 
 instance (Construct a, Construct b) => Construct (Either a b) where
     row v = row (Left >$< v) ||| row (Right >$< v)
 
     linearMap m = linearMap (m . padRight) ||| linearMap (m . padLeft)
 
-column :: (Construct a, Num e) => Vector e a -> Matrix e () a
+column :: (Construct a, Semiring e) => Vector e a -> Matrix e () a
 column = transpose . row
 
-function :: (Construct a, Construct b, Enumerable a, Num e) => (a -> b -> e) -> Matrix e a b
+function :: (Construct a, Construct b, Enumerable a, Semiring e) => (a -> b -> e) -> Matrix e a b
 function f = linearMap $ \v -> Vector $ \b -> dot v $ Vector $ \a -> f a b
 
 ----------------------------------- Semantics ----------------------------------
@@ -177,15 +191,8 @@ newtype Vector e a = Vector { at :: a -> e }
 instance Contravariant (Vector e) where
     contramap f (Vector g) = Vector (g . f)
 
-instance Num e => Num (Vector e a) where
-    fromInteger = Vector . const . fromInteger
-
-    (+)    = liftV2 (+)
-    (-)    = liftV2 (-)
-    (*)    = liftV2 (*)
-    abs    = liftV1 abs
-    negate = liftV1 negate
-    signum = error "No sensible definition"
+constV :: e -> Vector e a
+constV e = Vector (const e)
 
 liftV1 :: (e -> e) -> Vector e a -> Vector e a
 liftV1 f x = Vector (\a -> f (at x a))
@@ -196,24 +203,24 @@ liftV2 f x y = Vector (\a -> f (at x a) (at y a))
 -- Semantics of Matrix e a b
 type LinearMap e a b = Vector e a -> Vector e b
 
-semantics :: Num e => Matrix e a b -> LinearMap e a b
+semantics :: Semiring e => Matrix e a b -> LinearMap e a b
 semantics m = case m of
     Unit       -> id
-    Zero       -> const 0
+    Zero       -> const (constV zero)
     Lift f x y -> \v -> liftV2 f (semantics x v) (semantics y v)
-    Join x y   -> \v -> semantics x (Left >$< v) + semantics y (Right >$< v)
+    Join x y   -> \v -> liftV2 (|+|) (semantics x (Left >$< v)) (semantics y (Right >$< v))
     Fork x y   -> \v -> Vector $ either (at (semantics x v)) (at (semantics y v))
 
-padLeft :: Num e => Vector e b -> Vector e (Either a b)
-padLeft v = Vector $ \case Left _  -> 0
+padLeft :: Semiring e => Vector e b -> Vector e (Either a b)
+padLeft v = Vector $ \case Left _  -> zero
                            Right b -> at v b
 
-padRight :: Num e => Vector e a -> Vector e (Either a b)
+padRight :: Semiring e => Vector e a -> Vector e (Either a b)
 padRight v = Vector $ \case Left a  -> at v a
-                            Right _ -> 0
+                            Right _ -> zero
 
-dot :: (Num e, Enumerable a) => Vector e a -> Vector e a -> e
-dot x y = sum [ at x a * at y a | a <- enumerate ]
+dot :: (Semiring e, Enumerable a) => Vector e a -> Vector e a -> e
+dot x y = foldr (|+|) zero [ at x a |*| at y a | a <- enumerate ]
 
 -------------------------------- Deconstruction --------------------------------
 class Enumerable a where
@@ -235,14 +242,14 @@ instance (Enumerable a, Enumerable b) => Enumerable (Either a b) where
 instance (Enumerable a, Enumerable b) => Enumerable (a, b) where
     enumerate = [ (a, b) | a <- enumerate, b <- enumerate ]
 
-basis :: (Enumerable a, Eq a, Num e) => [Vector e a]
-basis = [ Vector (bool 0 1 . (==a)) | a <- enumerate ]
+basis :: (Enumerable a, Eq a, Semiring e) => [Vector e a]
+basis = [ Vector (bool zero one . (==a)) | a <- enumerate ]
 
-toLists :: (Enumerable a, Enumerable b, Eq a, Num e) => Matrix e a b -> [[e]]
+toLists :: (Enumerable a, Enumerable b, Eq a, Semiring e) => Matrix e a b -> [[e]]
 toLists m = List.transpose
     [ [ at r i | i <- enumerate ] | c <- basis, let r = semantics m c ]
 
-dump :: (Enumerable a, Enumerable b, Eq a, Num e, Show e) => Matrix e a b -> IO ()
+dump :: (Enumerable a, Enumerable b, Eq a, Semiring e, Show e) => Matrix e a b -> IO ()
 dump = mapM_ print . toLists
 
 ------------------------------- Normalised types -------------------------------
@@ -273,16 +280,16 @@ instance ConstructNorm Bool where
     toNorm = bool (Left ()) (Right ())
     fromNorm = either (const False) (const True)
 
-rowN :: (ConstructNorm a, Num e) => Vector e a -> Matrix e (Norm a) ()
+rowN :: (ConstructNorm a, Semiring e) => Vector e a -> Matrix e (Norm a) ()
 rowN = row . contramap fromNorm
 
-linearMapN :: (ConstructNorm a, ConstructNorm b, Num e)
+linearMapN :: (ConstructNorm a, ConstructNorm b, Semiring e)
            => LinearMap e a b -> Matrix e (Norm a) (Norm b)
 linearMapN = linearMap . dimap (contramap toNorm) (contramap fromNorm)
 
-columnN :: (ConstructNorm a, Num e) => Vector e a -> Matrix e () (Norm a)
+columnN :: (ConstructNorm a, Semiring e) => Vector e a -> Matrix e () (Norm a)
 columnN = transpose . rowN
 
-functionN :: (ConstructNorm a, ConstructNorm b, Enumerable a, Num e)
+functionN :: (ConstructNorm a, ConstructNorm b, Enumerable a, Semiring e)
           => (a -> b -> e) -> Matrix e (Norm a) (Norm b)
 functionN f = linearMapN $ \v -> Vector $ \b -> dot v $ Vector $ \a -> f a b

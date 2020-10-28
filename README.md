@@ -30,7 +30,7 @@ Source: https://github.com/snowleopard/cats/blob/master/src/Matrix.hs.
 
 An example `ghci` session:
 ```haskell
-λ> m = (one 1 ||| one 2) &&& (one 3 ||| one 4)
+λ> m = (singleton 1 ||| singleton 2) &&& (singleton 3 ||| singleton (4 :: Int))
 λ> dump m
 [1,2]
 [3,4]
@@ -43,7 +43,10 @@ An example `ghci` session:
 λ> dump ((m . transpose m) ||| id)
 [5,11,1,0]
 [11,25,0,1]
-λ> dump $ functionN (\x y -> bool 0 1 (x || y))
+λ> dump $ functionN (\x y -> bool 0 (1 :: Int) (x || y))
 [0,1]
 [1,1]
+λ> dump $ functionN (\x y -> x && y)
+[False,False]
+[False,True]
 ```
