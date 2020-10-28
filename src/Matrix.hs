@@ -29,14 +29,14 @@ import qualified Prelude
 
 --------------------------------- Construction ---------------------------------
 data Matrix e a b where
-    Identity :: Matrix e a a
-    Zero     :: Matrix e a b
-    Lift     :: (e -> e -> e) -> Matrix e a b -> Matrix e a b -> Matrix e a b
-    Join     :: Matrix e a c -> Matrix e b c -> Matrix e (Either a b) c
-    Fork     :: Matrix e a b -> Matrix e a c -> Matrix e a (Either b c)
+    Unit :: Matrix e a a
+    Zero :: Matrix e a b
+    Lift :: (e -> e -> e) -> Matrix e a b -> Matrix e a b -> Matrix e a b
+    Join :: Matrix e a c -> Matrix e b c -> Matrix e (Either a b) c
+    Fork :: Matrix e a b -> Matrix e a c -> Matrix e a (Either b c)
 
 empty :: Matrix e Void Void
-empty = Identity
+empty = Unit
 
 emap :: (e -> e) -> Matrix e a b -> Matrix e a b
 emap f = Lift (const f) Zero
@@ -45,7 +45,7 @@ scale :: Num e => e -> Matrix e a b -> Matrix e a b
 scale e = emap (e*)
 
 one :: Num e => e -> Matrix e () ()
-one e = scale e Identity
+one e = scale e Unit
 
 constant :: e -> Matrix e a b
 constant e = emap (const e) Zero
@@ -61,15 +61,15 @@ instance Num e => Num (Matrix e a b) where
     signum      = error "No sensible definition"
 
 instance Num e => Category (Matrix e) where
-    id = Identity
+    id = Unit
 
-    Identity   . x          = x
-    x          . Identity   = x
+    Unit       . x          = x
+    x          . Unit       = x
     Zero       . _          = Zero
     _          . Zero       = Zero
     Lift f x y . z          = Lift f (x . z) (y . z)
     x          . Lift f y z = Lift f (x . y) (x . z)
-    Join w x   . Fork y z   = (w . y) + (x . z)
+    Join w x   . Fork y z   = Lift (+) (w . y) (x . z)
     Fork x y   . z          = Fork (x . z) (y . z)
     x          . Join y z   = Join (x . y) (x . z)
 
@@ -88,8 +88,8 @@ instance Cartesian (->) where
 
 instance Num e => Cartesian (Matrix e) where
     type Product (Matrix e) = Either
-    fst   = Join Identity Zero
-    snd   = Join Zero Identity
+    fst   = Join Unit Zero
+    snd   = Join Zero Unit
     (&&&) = Fork
 
 -- A standard construction for any Cartesian category.
@@ -121,8 +121,8 @@ instance CoCartesian (->) where
 
 instance Num e => CoCartesian (Matrix e) where
     type Sum (Matrix e) = Either
-    inl = Fork Identity Zero
-    inr = Fork Zero Identity
+    inl = Fork Unit Zero
+    inr = Fork Zero Unit
     (|||) = Join
 
 class (Cartesian k, CoCartesian k) => Distributive k where
@@ -137,7 +137,7 @@ instance Num e => Distributive (Matrix e) where
 
 transpose :: Matrix e a b -> Matrix e b a
 transpose m = case m of
-    Identity   -> Identity
+    Unit       -> Unit
     Zero       -> Zero
     Lift f x y -> Lift f (transpose x) (transpose y)
     Join x y   -> Fork (transpose x) (transpose y)
@@ -198,7 +198,7 @@ type LinearMap e a b = Vector e a -> Vector e b
 
 semantics :: Num e => Matrix e a b -> LinearMap e a b
 semantics m = case m of
-    Identity   -> id
+    Unit       -> id
     Zero       -> const 0
     Lift f x y -> \v -> liftV2 f (semantics x v) (semantics y v)
     Join x y   -> \v -> semantics x (Left >$< v) + semantics y (Right >$< v)
