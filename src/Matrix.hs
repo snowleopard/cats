@@ -1,6 +1,5 @@
 {-# LANGUAGE DefaultSignatures, GADTs, LambdaCase, ScopedTypeVariables #-}
-{-# LANGUAGE RankNTypes, TypeApplications, TypeFamilies, TypeOperators #-}
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts, RankNTypes, TypeFamilies, TypeOperators #-}
 module Matrix where
 
 -- Experimenting with an inductive matrix data type that forms a category.
@@ -195,7 +194,7 @@ constV :: e -> Vector e a
 constV e = Vector (const e)
 
 liftV1 :: (e -> e) -> Vector e a -> Vector e a
-liftV1 f x = Vector (\a -> f (at x a))
+liftV1 f x = Vector (f . at x)
 
 liftV2 :: (e -> e -> e) -> Vector e a -> Vector e a -> Vector e a
 liftV2 f x y = Vector (\a -> f (at x a) (at y a))

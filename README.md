@@ -1,5 +1,7 @@
 # Musings on category theory
 
+[![Build status](https://img.shields.io/github/workflow/status/snowleopard/cats/ci.svg)](https://github.com/snowleopard/cats/actions)
+
 Nothing special, just trying to make sense of various papers and ideas involving
 Category Theory.
 
