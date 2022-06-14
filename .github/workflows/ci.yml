@@ -39,3 +39,5 @@ jobs:
         path: ${{ steps.setup-haskell.outputs.cabal-store }}
         key: ${{ runner.os }}-${{ matrix.ghc }}-${{ steps.get-ghc-libdir.outputs.libdir }}-${{ hashFiles('cabal.project.freeze') }}
     - uses: snowleopard/neil@master
+      with:
+        github-user: snowleopard
