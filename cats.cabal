@@ -5,13 +5,13 @@ license:       MIT
 license-file:  LICENSE
 author:        Andrey Mokhov <andrey.mokhov@gmail.com>, github: @snowleopard
 maintainer:    Andrey Mokhov <andrey.mokhov@gmail.com>, github: @snowleopard
-copyright:     Andrey Mokhov, 2018-2021
+copyright:     Andrey Mokhov, 2018-2022
 homepage:      https://github.com/snowleopard/cats
 bug-reports:   https://github.com/snowleopard/cats/issues
 category:      Categories
 build-type:    Simple
 cabal-version: >=1.18
-tested-with:   GHC==9.0, GHC==8.10
+tested-with:   GHC==9.2, GHC==9.0, GHC==8.10
 description:   Musings on category theory and functional programming
 
 extra-doc-files:
