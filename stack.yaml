@@ -1,4 +1,1 @@
-resolver: nightly-2020-11-28
-
-packages:
-- '.'
+resolver: lts-19.11
